@@ -35,15 +35,23 @@ fn App() -> Html {
         new_message_handle.set("".to_string());
     });
     html! {
-        <>
-            <ul id="chat">
+        <div class="container">
+            <div class="row">
+                <ul class="list-group">
                 {
-                    message.iter().map(|m| html!{<li>{m}</li>}).collect::<Html>()
+                    message.iter().map(|m| html!{
+                        <li class="list-group-item">{m}</li>
+                    }).collect::<Html>()
                 }
-            </ul>
-            <textarea onchange={on_message_change} value={new_message}></textarea>
-            <button type="submit" onclick={on_button_click}>{"Send"}</button>
-        </>
+                </ul>
+            </div>
+            <div class="row">
+                <div class="input-group">
+                    <textarea class="form-control" onchange={on_message_change} value={new_message}></textarea>
+                    <button class="btn-primary" type="submit" onclick={on_button_click}>{"Send"}</button>
+                </div>
+            </div>
+        </div>
     }
 }
 
