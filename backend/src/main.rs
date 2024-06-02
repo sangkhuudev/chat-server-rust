@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::atomic::{AtomicUsize, Ordering}};
 
 use chrono::Utc;
-use common::ChatMessage;
+use common::{ChatMessage, WebsocketMessage, WebsocketMessageType};
 use rocket_ws::{stream::DuplexStream, Channel, Message, WebSocket};
 use rocket::{futures::{stream::SplitSink, SinkExt, StreamExt}, tokio::sync::Mutex, State};
 use serde_json::json;
@@ -25,10 +25,16 @@ impl ChatRoom {
             author: format!("User #{}", author_id),
             created_at: Utc::now().naive_utc(),
         };
+
+        let websocket_message = WebsocketMessage {
+            message_type: WebsocketMessageType::NewMessage,
+            message: Some(chat_message),
+            users: None,
+        };
         let mut conns = self.connections.lock().await;
             for (_id, sink) in conns.iter_mut() {
                 let _ = sink.send(
-                    Message::Text(json!(chat_message).to_string())
+                    Message::Text(json!(websocket_message).to_string())
                 ).await;
             }
     }
