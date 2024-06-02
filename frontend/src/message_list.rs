@@ -1,0 +1,26 @@
+use common::ChatMessage;
+use yew::prelude::*;
+
+#[derive(Properties, PartialEq)]
+pub struct Props {
+    pub message: Vec<ChatMessage>,
+}
+
+#[function_component(MessageList)]
+pub fn message_list(props: &Props) -> Html {
+    html! {
+        <div class="list-group">
+        {
+            props.message.iter().map(|m| html!{
+                <div class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 flex-row justify-content-between">
+                        <h5 class ="flex-fill">{m.author.clone()}</h5>
+                        <small class ="flex-fill">{m.created_at.format("%Y-%m-%d %H:%M:%S").to_string()}</small>
+                        <p class ="flex-fill">{m.message.clone()}</p>
+                    </div>
+                </div>
+            }).collect::<Html>()
+        }
+        </div>
+    }
+}

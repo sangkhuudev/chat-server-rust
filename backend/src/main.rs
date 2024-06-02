@@ -38,6 +38,25 @@ impl ChatRoom {
                 ).await;
             }
     }
+
+    pub async fn broadcast_users(&self) {
+        let mut conns = self.connections.lock().await;
+        let mut users = vec![];
+        for (id, _sink) in conns.iter() {
+            users.push(format!("User #{}", id))
+        }
+        let websocket_message = WebsocketMessage {
+            message_type: WebsocketMessageType::UsersList,
+            message: None,
+            users: Some(users),
+        };
+        for (_id, sink) in conns.iter_mut() {
+            let _ = sink.send(
+                Message::Text(json!(websocket_message).to_string())
+            ).await;
+        }
+    }
+
     pub async fn remove(&self, id: usize) {
         let mut conns = self.connections.lock().await;
             conns.remove(&id);
@@ -52,12 +71,14 @@ async fn chat<'r>(ws: WebSocket, state:  &'r State<ChatRoom>) -> Channel<'r> {
         let user_id = USER_ID_COUNTER.fetch_add(1, Ordering::Relaxed);
         let (ws_sink, mut ws_stream) = stream.split();
         state.add(user_id, ws_sink).await;
+        state.broadcast_users().await;
 
         while let Some(message) = ws_stream.next().await {
             state.broadcast_message(message?, user_id).await
         }
 
         state.remove(user_id).await;
+        state.broadcast_users().await;
 
         Ok(())
     }))
