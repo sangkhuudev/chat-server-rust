@@ -34,7 +34,7 @@ cd backend
 cargo run
   ```
 3. Frontend uses `Yew framework` 
-Open another terminal and run the client: (at port 8080)
+Open another terminal and run the client (at port 8080) :
 ```sh
 cd frontend
 trunk serve

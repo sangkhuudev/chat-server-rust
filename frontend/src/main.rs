@@ -1,6 +1,8 @@
-use common::{WebsocketMessage, WebsocketMessageType};
+use chrono::Utc;
+use common::{ChatMessage, WebsocketMessage, WebsocketMessageType};
 use message_list::MessageList;
 use send_dialog::SendDialog;
+use serde_json::json;
 use users_list::UsersList;
 use yew::prelude::*;
 use yew_hooks::use_websocket;
@@ -16,8 +18,11 @@ fn App() -> Html {
     let mut cloned_message = message.clone();
     let users_handle = use_state(Vec::default);
     let users = (*users_handle).clone();
+    let username_handle = use_state(String::default);
+    let username = (*username_handle).clone();
 
-    let new_message_handle = use_state(String::default);
+    // let new_message_handle = use_state(String::default);
+    // let new_username_handle = use_state(String::default);
 
     let ws = use_websocket("ws://127.0.0.1:8000/".to_string());
 
@@ -33,16 +38,40 @@ fn App() -> Html {
                 WebsocketMessageType::UsersList => {
                     let user = websocket_message.users.expect("Missing users payload");
                     users_handle.set(user);
+                },
+                WebsocketMessageType::UsernameChange => {
+                    let username = websocket_message.username.expect("Missing username payload");
+                    username_handle.set(username);
                 }
             }
         }
     });
 
-
+    let cloned_username = username.clone();
     let cloned_ws = ws.clone();
     let send_dialog_callback = Callback::from(move |msg: String| {
-        cloned_ws.send(msg.clone());
-        new_message_handle.set("".to_string());
+        let websocket_message = WebsocketMessage {
+            message_type: WebsocketMessageType::NewMessage,
+            message: Some( ChatMessage {
+                message: msg,
+                author: cloned_username.clone(),
+                created_at: Utc::now().naive_utc()
+            }),
+            users: None,
+            username: None,
+        };
+        cloned_ws.send(json!(websocket_message).to_string());
+    });
+
+    let cloned_ws = ws.clone();
+    let username_change_callback = Callback::from(move |username: String| {
+        let websocket_message = WebsocketMessage {
+            message_type: WebsocketMessageType::UsernameChange,
+            message: None,
+            users: None,
+            username: Some(username),
+        };
+        cloned_ws.send(json!(websocket_message).to_string());
     });
     html! {
         <div class="container-fluid">
@@ -55,7 +84,13 @@ fn App() -> Html {
                 </div>
             </div>
             <div class="row">
-                <SendDialog send_dialog_callback={send_dialog_callback} />
+                if username.len() > 0 {
+                    <SendDialog 
+                        username_change_callback={username_change_callback}
+                        send_dialog_callback={send_dialog_callback} 
+                        username={username}
+                    />
+                }
             </div>
         </div>
     }
