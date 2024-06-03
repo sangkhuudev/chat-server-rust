@@ -15,6 +15,8 @@ pub fn message_list(props: &Props) -> Html {
                 let mut classes = classes!("list-group-item", "list-group-item-action");
                 if m.author == "System" {
                     classes.push("list-group-item-info");
+                } else {
+                    classes.push("list-group-item-warning");
                 }
 
                 html!{
