@@ -27,13 +27,13 @@ Below are some examples of how you can use the project.
 git clone git@github.com:sangkhuudev/chat-server-rust.git
 ```
 
-2. Backend uses `rocket framework`
-Run the backend server (at port 8000) :
+2. Backend uses `rocket framework`.
+To run the backend server (at port 8000) :
   ```sh
 cd backend
 cargo run
   ```
-3. Frontend uses `Yew framework` 
+3. Frontend uses `Yew framework`.
 Open another terminal and run the client (at port 8080) :
 ```sh
 cd frontend
