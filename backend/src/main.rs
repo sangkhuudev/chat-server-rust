@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::atomic::{AtomicUsize, Ordering}};
 
+use chrono::Utc;
 use common::{ChatMessage, WebsocketMessage, WebsocketMessageType};
 use rocket_ws::{stream::DuplexStream, Channel, Message, WebSocket};
 use rocket::{futures::{stream::SplitSink, SinkExt, StreamExt}, tokio::sync::Mutex, State};
@@ -18,12 +19,24 @@ struct ChatRoomConnection {
 }
 impl ChatRoom {
     pub async fn add(&self, id: usize, sink: SplitSink<DuplexStream, Message>) {
-        let mut conns = self.connections.lock().await;
-        let connection = ChatRoomConnection {
-            username: format!("User #{}", id),
-            sink
-        };
+        let result = {
+            let mut conns = self.connections.lock().await;
+            let connection = ChatRoomConnection {
+                username: format!("User #{}", id),
+                sink
+            };
             conns.insert(id, connection);
+            Some(id)
+        };
+    
+        if let Some(id) = result {
+            let message = ChatMessage {
+                message: format!("User {} has entered into chat room", id),
+                author: "System".to_string(),
+                created_at: Utc::now().naive_utc()
+            };
+            Self::broadcast_message(&self, message).await;
+        }    
     }
 
     pub async fn broadcast_message(&self, message: ChatMessage) {
@@ -78,17 +91,48 @@ impl ChatRoom {
     }
 
     pub async fn change_username(&self, new_username: String, id: usize) {
-        let mut conns = self.connections.lock().await;
-        if let Some(connection) = conns.get_mut(&id) {
-            connection.username = new_username;
-        } else {
-            eprintln!("No connection found with id: {}", id);
-        }
+        let result = {
+            let mut conns = self.connections.lock().await;
+            if let Some(connection) = conns.get_mut(&id) {
+            let old_username = connection.username.clone();
+            connection.username = new_username.clone();
+            Some(old_username)
+            } else {
+                None
+            }
+        };
+
+        if let Some(old_username) = result {
+            let message = ChatMessage {
+                message: format!("User {} changed username to {}", old_username, new_username),
+                author: "System".to_string(),
+                created_at: Utc::now().naive_utc()
+            };
+            Self::broadcast_message(&self, message).await;
+        }    
+        
     }
 
     pub async fn remove(&self, id: usize) {
-        let mut conns = self.connections.lock().await;
+        let result = {
+            let mut conns = self.connections.lock().await;
+            if let Some(connection) = conns.get_mut(&id) {
+            let username = connection.username.clone();
             conns.remove(&id);
+            Some(username)
+            } else {
+                None
+            }
+        };
+    
+        if let Some(username) = result {
+            let message = ChatMessage {
+                message: format!("{} has left the chat room", username),
+                author: "System".to_string(),
+                created_at: Utc::now().naive_utc()
+            };
+            Self::broadcast_message(&self, message).await;
+        }    
     }
 }
 
